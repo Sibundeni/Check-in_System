@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center fw-bold mb-4">Student Logbook Submissions 📄</h2>
+
+    <div class="card p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Student</th>
+                        <th>File Name</th>
+                        <th>Uploaded At</th>
+                        <th>WB1</th>
+                        <th>WBL2</th>
+                        <th>WBL3</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in assignments %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ a.user.fullname }}</td>
+                        <td>{{ a.filename }}</td>
+                        <td>{{ a.upload_date.strftime("%Y-%m-%d %H:%M") }}</td>
+                        <td>{% if a.wb1_submitted %}✅{% else %}-{% endif %}</td>
+                        <td>{% if a.wbl2_submitted %}✅{% else %}-{% endif %}</td>
+                        <td>{% if a.wbl3_submitted %}✅{% else %}-{% endif %}</td>
+                        <td>
+                            <a href="{{ url_for('mentor_download', assignment_id=a.id) }}" class="btn btn-sm btn-primary">Download</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="text-center">No submissions yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

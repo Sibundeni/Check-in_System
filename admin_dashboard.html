@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+  /* General Body */
+  body {
+    background: #f4f4f4;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    min-height: 100vh;
+  }
+  h2, h6, label, .fw-semibold { color: #1F2937 !important; }
+
+  /* Cards */
+  .card {
+    background: linear-gradient(145deg, #fff, #f0f0f0);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    padding: 20px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+  }
+
+  /* Stat Cards */
+  .stat-card h6 { font-size: 0.9rem; font-weight: 600; color: #555; }
+  .stat-card h3 { font-size: 1.8rem; font-weight: 700; margin-top: 10px; color: #111827; }
+
+  /* Table */
+  .table thead { background-color: #6366F1; color: #fff; font-weight: 600; }
+  .table tbody tr:hover { background-color: rgba(99,102,241,0.1); cursor: pointer; }
+  .table td, .table th { vertical-align: middle; }
+
+  /* Filters */
+  .form-select, input.form-control { color: #111827; }
+
+  .container { max-width: 1250px; }
+
+  @media(max-width: 768px) { .row { flex-direction: column; } }
+</style>
+
+<div class="container mt-5">
+  <h2 class="text-center fw-bold mb-4">Mentor Dashboard 📊</h2>
+
+  <!-- Filters -->
+  <form id="filterForm" class="row g-3 mb-4 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label fw-semibold">Filter by Student</label>
+      <select name="name" class="form-select">
+        <option value="">All students</option>
+        {% for e in employees %}
+          <option value="{{ e.id }}" {% if e.id|string == name_filter %}selected{% endif %}>{{ e.fullname }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label fw-semibold">Filter by Month</label>
+      <select name="month" class="form-select">
+        <option value="">All Months</option>
+        {% set months = ["January","February","March","April","May","June","July","August","September","October","November","December"] %}
+        {% for i in range(1,13) %}
+          <option value="{{ i }}" {% if month_filter|int == i %}selected{% endif %}>{{ months[i-1] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label fw-semibold">Filter by Year</label>
+      <select name="year" class="form-select">
+        <option value="">All Years</option>
+        {% for y in range(2023, now.year + 1) %}
+          <option value="{{ y }}" {% if year_filter|int == y %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label fw-semibold">Filter by Day</label>
+      <input type="date" name="day" class="form-control" value="{{ day_filter if day_filter else '' }}">
+    </div>
+  </form>
+
+  <!-- Stats -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="card stat-card text-center">
+        <h6>Total Check-Ins</h6>
+        <h3 id="totalCheckins">0</h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card stat-card text-center">
+        <h6>Earliest Check-In</h6>
+        <h3 id="earliestCheckin">-</h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card stat-card text-center">
+        <h6>Most Active Student</h6>
+        <h3 id="mostActive">-</h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card stat-card text-center">
+        <h6>Least Active Student</h6>
+        <h3 id="leastActive">-</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Absent Days -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="card stat-card text-center">
+        <h6>Total Absent Days</h6>
+        <h3 id="totalAbsentDays">0</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="row g-4 mb-5">
+    <div class="col-md-4">
+      <div class="card">
+        <h6 class="text-center fw-semibold mb-3">Monthly Check-Ins</h6>
+        <canvas id="monthChart"></canvas>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <h6 class="text-center fw-semibold mb-3">Check-Ins by Student</h6>
+        <canvas id="employeeChart"></canvas>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <h6 class="text-center fw-semibold mb-3">Attendance Overview</h6>
+        <canvas id="attendancePieChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- All Check-ins Table -->
+  <div class="card mb-5">
+    <h6 class="fw-semibold mb-3">All Student Check-In History</h6>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>#</th><th>Student</th><th>Date</th><th>Time</th><th>Comment</th>
+          </tr>
+        </thead>
+        <tbody id="checkinTable"></tbody>
+      </table>
+      <nav aria-label="Page navigation">
+        <ul id="pagination" class="pagination justify-content-center"></ul>
+      </nav>
+    </div>
+  </div>
+
+<!-- Mentor Logbooks Table -->
+<div class="card mb-5">
+  <h6 class="fw-semibold mb-3">Student Logbook Submissions</h6>
+
+  <!-- Search & Filters -->
+  <div class="row g-3 mb-3">
+    <div class="col-md-4">
+      <input type="text" id="logbookSearch" class="form-control" placeholder="Search by Student or File Name">
+    </div>
+    <div class="col-md-4">
+      <select id="logbookMonthFilter" class="form-select">
+        <option value="">All Months</option>
+        {% set months = ["January","February","March","April","May","June","July","August","September","October","November","December"] %}
+        {% for i in range(1,13) %}
+          <option value="{{ i }}">{{ months[i-1] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <select id="logbookYearFilter" class="form-select">
+        <option value="">All Years</option>
+        {% for y in range(2023, now.year + 1) %}
+          <option value="{{ y }}">{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle" id="logbookTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>File Name</th>
+          <th>Uploaded At</th>
+          <th>WB1</th>
+          <th>WBL2</th>
+          <th>WBL3</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assignments %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ a.user.fullname }}</td>
+          <td>{{ a.filename }}</td>
+          <td data-date="{{ a.upload_date.strftime('%Y-%m-%d') }}">{{ a.upload_date.strftime("%Y-%m-%d %H:%M") }}</td>
+          <td>{% if a.wb1_submitted %}✅{% else %}-{% endif %}</td>
+          <td>{% if a.wbl2_submitted %}✅{% else %}-{% endif %}</td>
+          <td>{% if a.wbl3_submitted %}✅{% else %}-{% endif %}</td>
+          <td>
+            <a href="{{ url_for('mentor_download', assignment_id=a.id) }}" class="btn btn-sm btn-primary">Download</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="text-center">No submissions yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// Logbook Table Search & Filter
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('logbookSearch');
+  const monthFilter = document.getElementById('logbookMonthFilter');
+  const yearFilter = document.getElementById('logbookYearFilter');
+  const table = document.getElementById('logbookTable');
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+
+  function filterLogbooks() {
+    const searchText = searchInput.value.toLowerCase();
+    const monthVal = monthFilter.value;
+    const yearVal = yearFilter.value;
+
+    rows.forEach(row => {
+      const student = row.cells[1].textContent.toLowerCase();
+      const filename = row.cells[2].textContent.toLowerCase();
+      const date = row.cells[3].dataset.date; // YYYY-MM-DD
+      const rowMonth = date.split('-')[1];
+      const rowYear = date.split('-')[0];
+
+      const matchesSearch = student.includes(searchText) || filename.includes(searchText);
+      const matchesMonth = monthVal === '' || monthVal === rowMonth;
+      const matchesYear = yearVal === '' || yearVal === rowYear;
+
+      if (matchesSearch && matchesMonth && matchesYear) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
+
+  searchInput.addEventListener('input', filterLogbooks);
+  monthFilter.addEventListener('change', filterLogbooks);
+  yearFilter.addEventListener('change', filterLogbooks);
+});
+</script>
+{% endblock %}

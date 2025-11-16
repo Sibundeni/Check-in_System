@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid mt-4">
+
+  <!-- Dashboard Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold text-primary">MicSETA Admin Dashboard</h2>
+    <div>
+      <button class="btn btn-outline-primary me-2">Refresh</button>
+      <button class="btn btn-primary">Export</button>
+    </div>
+  </div>
+
+  <!-- Filters (Slicers) -->
+  <div class="row mb-4">
+    <div class="col-md-4 mb-2">
+      <label class="form-label fw-semibold">Filter by Student</label>
+      <select class="form-select" name="name" onchange="this.form.submit()">
+        <option value="">All Students</option>
+        {% for e in employees %}
+          <option value="{{ e.id }}" {% if e.id|string == name_filter|string %}selected{% endif %}>
+            {{ e.fullname }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4 mb-2">
+      <label class="form-label fw-semibold">Filter by Month</label>
+      <select class="form-select" name="month" onchange="this.form.submit()">
+        <option value="">All Months</option>
+        {% for m in range(1, 13) %}
+          <option value="{{ m }}" {% if month_filter|int == m %}selected{% endif %}>
+            {{ ["January","February","March","April","May","June","July","August","September","October","November","December"][m-1] }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4 d-flex align-items-end">
+      <button class="btn btn-primary w-100">Apply Filters</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row mb-5">
+    <div class="col-md-3 mb-3">
+      <div class="card text-white bg-primary shadow-sm h-100 rounded-4 p-3">
+        <h6>Total Check-Ins</h6>
+        <h2 class="fw-bold">{{ total_checkins|default(0) }}</h2>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card text-white bg-success shadow-sm h-100 rounded-4 p-3">
+        <h6>Most Active Student</h6>
+        <h4>{{ highest_checkin_employee or '—' }}</h4>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card text-white bg-warning shadow-sm h-100 rounded-4 p-3">
+        <h6>Earliest Check-In</h6>
+        <h4>{{ earliest_checkin.timestamp.strftime('%H:%M') if earliest_checkin and earliest_checkin.timestamp else '—' }}</h4>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card text-white bg-danger shadow-sm h-100 rounded-4 p-3">
+        <h6>Absent Days</h6>
+        <h4>{{ absent_days|default(0) }}</h4>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="row mb-5">
+    <div class="col-md-6 mb-3">
+      <div class="card shadow-sm rounded-4 p-3 h-100">
+        <h6 class="fw-semibold text-center mb-3">Check-Ins by Month</h6>
+        <canvas id="checkinBarChart" height="250"></canvas>
+      </div>
+    </div>
+    <div class="col-md-6 mb-3">
+      <div class="card shadow-sm rounded-4 p-3 h-100">
+        <h6 class="fw-semibold text-center mb-3">Check-Ins by Student</h6>
+        <canvas id="checkinPieChart" height="250"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Check-Ins Table -->
+  <div class="card shadow-sm rounded-4 p-3 mb-5">
+    <h5 class="fw-bold mb-3">Recent Check-Ins</h5>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Student</th>
+            <th>Check-In Time</th>
+            <th>Date</th>
+            <th>Comment</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in checkins %}
+            <tr>
+              <td>{{ c.user.full_name }}</td>
+              <td>{{ c.timestamp.strftime('%H:%M') if c.timestamp else '—' }}</td>
+              <td>{{ c.timestamp.strftime('%Y-%m-%d') if c.timestamp else '—' }}</td>
+              <td>{{ c.comment or '-' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <!-- Pagination -->
+    <nav class="mt-3">
+      <ul class="pagination justify-content-center">
+        {% if pagination.has_prev %}
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('admin_dashboard', page=pagination.prev_num, name=name_filter, month=month_filter) }}">Previous</a>
+          </li>
+        {% endif %}
+        {% for p in pagination.iter_pages() %}
+          {% if p %}
+            <li class="page-item {% if p == pagination.page %}active{% endif %}">
+              <a class="page-link" href="{{ url_for('admin_dashboard', page=p, name=name_filter, month=month_filter) }}">{{ p }}</a>
+            </li>
+          {% endif %}
+        {% endfor %}
+        {% if pagination.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('admin_dashboard', page=pagination.next_num, name=name_filter, month=month_filter) }}">Next</a>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+</div>
+
+<!-- Chart.js Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const monthLabels = {{ month_labels|default([])|tojson }};
+  const monthCounts = {{ month_counts|default([])|tojson }};
+  const employeeNames = {{ employee_names|default([])|tojson }};
+  const employeeCounts = {{ employee_counts|default([])|tojson }};
+
+  // Bar chart: Check-Ins by Month
+  new Chart(document.getElementById("checkinBarChart"), {
+    type: "bar",
+    data: {
+      labels: monthLabels,
+      datasets: [{
+        label: "Check-Ins",
+        data: monthCounts,
+        backgroundColor: "rgba(0, 123, 255, 0.7)",
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+
+  // Pie chart: Check-Ins by Student
+  new Chart(document.getElementById("checkinPieChart"), {
+    type: "pie",
+    data: {
+      labels: employeeNames,
+      datasets: [{
+        data: employeeCounts,
+        backgroundColor: [
+          "#007bff","#28a745","#ffc107","#dc3545","#6610f2","#20c997","#fd7e14"
+        ]
+      }]
+    },
+    options: { responsive: true, plugins: { legend: { position: "bottom" } } }
+  });
+});
+</script>
+{% endblock %}

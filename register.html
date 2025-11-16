@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Moepi Check-In Register</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f8f9fa;
+      font-family: 'Poppins', sans-serif;
+      color: #1E2A38;
+      min-height: 100vh;
+    }
+    .auth-card-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: calc(100vh - 70px);
+      padding: 20px;
+    }
+    .auth-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      padding: 40px 30px;
+      width: 100%;
+      max-width: 500px;
+      border-top: 6px solid #D6E03F;
+      animation: fadeIn 0.8s ease;
+      text-align: center;
+    }
+    .auth-card h4 {
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #1E2A38;
+    }
+    .form-label {
+      font-weight: 500;
+      color: #1E2A38;
+    }
+    input.form-control, select.form-select {
+      border-radius: 8px;
+      border: 1px solid #ced4da;
+      padding: 10px;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    input.form-control:focus, select.form-select:focus {
+      border-color: #D6E03F;
+      box-shadow: 0 0 0 0.2rem rgba(214, 224, 63, 0.25);
+    }
+    .brand-btn {
+      background-color: #D6E03F;
+      border: none;
+      color: #1E2A38;
+      font-weight: 600;
+      padding: 12px 0;
+      border-radius: 30px;
+      transition: all 0.3s ease;
+    }
+    .brand-btn:hover {
+      background-color: #c4d238;
+      transform: translateY(-2px);
+    }
+    .user-toggle button {
+      margin: 0 5px;
+    }
+    .fadeIn {
+      animation: fadeIn 0.5s ease forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    footer {
+      position: fixed;
+      bottom: 15px;
+      width: 100%;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+
+<div class="auth-card-wrapper">
+  <div class="auth-card">
+    <h4>Register</h4>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-3">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Buttons to toggle Student/Admin -->
+    <div class="mb-4 user-toggle d-flex justify-content-center">
+      <button type="button" class="btn btn-outline-primary" id="studentBtn">Student</button>
+      <button type="button" class="btn btn-outline-secondary" id="adminBtn">Admin</button>
+    </div>
+
+    <form method="POST" action="{{ url_for('register') }}">
+      <!-- Hidden user_category, updated via JS -->
+      <input type="hidden" name="user_category" id="userCategory" value="">
+
+      <!-- Common Fields -->
+      <div class="mb-3 text-start">
+        <label class="form-label">Full Name</label>
+        <input name="fullname" class="form-control" placeholder="Name Surname" required>
+      </div>
+      <div class="mb-3 text-start">
+        <label class="form-label">Email</label>
+        <input name="email" type="email" class="form-control" placeholder="Enter your Email" required>
+      </div>
+      <div class="mb-3 text-start">
+        <label class="form-label">Password</label>
+        <input name="password" type="password" class="form-control" placeholder="Enter your Password" required>
+      </div>
+      <div class="mb-3 text-start">
+        <label class="form-label">Confirm Password</label>
+        <input name="confirm" type="password" class="form-control" placeholder="Confirm Password" required>
+      </div>
+
+      <!-- Student Fields -->
+      <div id="studentForm" class="d-none">
+        <div class="mb-3 text-start">
+          <label class="form-label">Student Number</label>
+          <input name="student_number" class="form-control" placeholder="Enter Student Number">
+        </div>
+        <div class="mb-3 text-start">
+          <label class="form-label">Type of Institution</label>
+          <select id="institutionType" name="institution_type" class="form-select">
+            <option value="">-- Select --</option>
+            <option value="University">University</option>
+            <option value="University of Technology">University of Technology</option>
+            <option value="TVET College">TVET College</option>
+          </select>
+        </div>
+        <div class="mb-3 text-start">
+          <label class="form-label">Institution Name</label>
+          <select id="institutionName" name="institution_name" class="form-select">
+            <option value="">-- Select Institution --</option>
+          </select>
+        </div>
+        <div class="mb-3 text-start">
+          <label class="form-label">Department</label>
+          <select name="department" class="form-select">
+            <option value="">-- Select Department --</option>
+            <option value="Multimedia">Multimedia</option>
+            <option value="Data Science">Data Science</option>
+            <option value="Development">Development</option>
+          </select>
+        </div>
+        <div class="mb-3 text-start">
+          <label class="form-label">Select Mentor</label>
+          <select name="mentor_id" class="form-select">
+            <option value="">-- Select Mentor --</option>
+            {% for mentor in mentors %}
+              <option value="{{ mentor.id }}">{{ mentor.fullname }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Admin Fields -->
+      <div id="adminForm" class="d-none">
+        <div class="mb-3 text-start">
+          <label class="form-label">Type of User</label>
+          <select id="userType" name="user_type" class="form-select">
+            <option value="">-- Select --</option>
+            <option value="Mentor">Mentor</option>
+            <option value="WIL Co-ordinator">WIL Co-ordinator</option>
+            <option value="MICSETA Mentor">MICSETA Mentor</option>
+          </select>
+        </div>
+        <div class="mb-3 text-start">
+          <label class="form-label">Organization</label>
+          <select id="organization" name="organization" class="form-select">
+            <option value="">-- Select Organization --</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn brand-btn w-100" type="submit">Register</button>
+    </form>
+
+    <div class="text-center mt-3 small">
+      Already have an account? <a href="{{ url_for('login') }}">Login</a>
+    </div>
+  </div>
+</div>
+
+<footer>
+  © {{ current_year or "2025" }} Moepi Publishing — All Rights Reserved
+</footer>
+
+<script>
+  const studentBtn = document.getElementById('studentBtn');
+  const adminBtn = document.getElementById('adminBtn');
+  const studentForm = document.getElementById('studentForm');
+  const adminForm = document.getElementById('adminForm');
+  const userCategory = document.getElementById('userCategory');
+
+  studentBtn.addEventListener('click', () => {
+    studentForm.classList.remove('d-none');
+    studentForm.classList.add('fadeIn');
+    adminForm.classList.add('d-none');
+    userCategory.value = 'Student';
+  });
+
+  adminBtn.addEventListener('click', () => {
+    adminForm.classList.remove('d-none');
+    adminForm.classList.add('fadeIn');
+    studentForm.classList.add('d-none');
+    userCategory.value = 'Admin';
+  });
+
+  // Dynamic institution filtering
+  const institutionType = document.getElementById('institutionType');
+  const institutionName = document.getElementById('institutionName');
+
+  const institutions = {
+    "University": ["University of Cape Town","University of Fort Hare","University of the Free State","University of KwaZulu‑Natal","North‑West University","University of Pretoria","Rhodes University","Stellenbosch University","University of the Western Cape","University of the Witwatersrand","University of Limpopo","University of Mpumalanga","Sol Plaatje University","Sefako Makgatho Health Sciences University","University of Johannesburg","University of South Africa (UNISA)","University of Venda","University of Zululand","Walter Sisulu University"],
+    "University of Technology": ["Cape Peninsula University of Technology","Central University of Technology","Durban University of Technology","Mangosuthu University of Technology","Tshwane University of Technology","Vaal University of Technology"],
+    "TVET College": ["Boland TVET College","Buffalo City TVET College","Capricorn TVET College","Central Johannesburg TVET College","Coastal TVET College","Ikhala TVET College","Eastcape Midlands TVET College","Flavius Mareka TVET College","Goldfields TVET College","Maluti TVET College","Mopani South East TVET College","Sekhukhune TVET College","Vhembe TVET College","Ehlanzeni TVET College","Gert Sibande TVET College","Nkangala TVET College","Northern Cape Rural TVET College","Northern Cape Urban TVET College","Orbit TVET College","Taletso TVET College","Vuselela TVET College"]
+  };
+
+  institutionType.addEventListener('change', () => {
+    const type = institutionType.value;
+    institutionName.innerHTML = '<option value="">-- Select Institution --</option>';
+    if (institutions[type]) {
+      institutions[type].forEach(inst => {
+        institutionName.innerHTML += `<option value="${inst}">${inst}</option>`;
+      });
+    }
+  });
+
+  // Admin organization filtering
+  const userType = document.getElementById('userType');
+  const organization = document.getElementById('organization');
+
+  const orgs = {
+    "Mentor": ["Moepi Publishing", "MICSETA"],
+    "MICSETA Mentor": ["Moepi Publishing", "MICSETA"],
+    "WIL Co-ordinator": Object.values(institutions).flat()
+  };
+
+  userType.addEventListener('change', () => {
+    const type = userType.value;
+    organization.innerHTML = '<option value="">-- Select Organization --</option>';
+    if (orgs[type]) {
+      orgs[type].forEach(org => {
+        organization.innerHTML += `<option value="${org}">${org}</option>`;
+      });
+    }
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
