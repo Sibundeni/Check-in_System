@@ -1,0 +1,90 @@
+:root{
+  --brand-yellow: #D7DF23; /* from logo */
+  --brand-dark: #1C1C2B;   /* from logo */
+  --muted: #6c757d;
+}
+
+/* Basic layout */
+body{
+  background: linear-gradient(180deg, #f7f9f5 0%, #ffffff 100%);
+  color: var(--brand-dark);
+  font-family: "Helvetica Neue", Arial, sans-serif;
+}
+
+.navbar{
+  background: var(--brand-dark);
+  padding: .6rem 0;
+  color: white;
+}
+
+.navbar .brand-title{
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: white;
+  font-size: 1.2rem;
+}
+
+.navbar .brand-sub{
+  color: var(--brand-yellow);
+  font-size: .7rem;
+  margin-top: -4px;
+}
+
+.logo{
+  width:48px;
+  height:48px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: white;
+  padding: 4px;
+}
+
+/* Cards and forms */
+.card.auth-card{
+  border: none;
+  box-shadow: 0 6px 18px rgba(28,28,43,0.06);
+  border-radius: 12px;
+  padding: 0;
+}
+
+.brand-btn{
+  background: linear-gradient(90deg, var(--brand-yellow), #cdda1b);
+  color: var(--brand-dark);
+  font-weight: 700;
+  border:none;
+  border-radius: 8px;
+  padding: .6rem;
+}
+
+.brand-btn:hover{
+  opacity: .95;
+}
+
+.brand-outline{
+  border: 2px solid var(--brand-yellow);
+  color: var(--brand-yellow);
+  background: transparent;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: .6rem;
+}
+
+/* small touches */
+.checkin-row{
+  padding: .5rem .75rem;
+  border-radius: 8px;
+  background: rgba(215,223,35,0.06);
+  margin-bottom: .5rem;
+}
+
+textarea.form-control {
+  resize: none;
+  border: 1px solid #D7DF23;
+  border-radius: 8px;
+}
+
+.card {
+  border-radius: 1rem;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+}
+
